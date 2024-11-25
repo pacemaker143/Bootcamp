@@ -1,0 +1,93 @@
+-- Step 1: Create the Stud_Marks and Result tables
+CREATE TABLE Stud_Marks (
+    name VARCHAR(255),
+    total_marks INT
+);
+
+CREATE TABLE Result (
+    roll INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    class VARCHAR(50)
+);
+
+-- Step 2: Create the proc_Grade procedure
+DELIMITER $$
+
+CREATE PROCEDURE proc_Grade (
+    p_name VARCHAR(255),
+    p_total_marks INT
+)
+BEGIN
+    DECLARE v_class VARCHAR(50);
+
+    -- Determine the class based on marks
+    IF p_total_marks >= 990 AND p_total_marks <= 1500 THEN
+        SET v_class = 'Distinction';
+    elseif p_total_marks >= 900 AND p_total_marks <= 989 THEN
+        SET v_class = 'First Class';
+    elseif p_total_marks >= 825 AND p_total_marks <= 899 THEN
+        SET v_class = 'Higher Second Class';
+    else
+        SET v_class = 'Fail';
+    END IF;
+
+    -- Insert the result into the Result table
+    INSERT INTO Result (name, class) VALUES (p_name, v_class);
+END$$
+
+DELIMITER ;
+
+-- Step 3: Create the proc_Process_Students procedure
+DELIMITER $$
+
+CREATE PROCEDURE proc_Process_Students()
+BEGIN
+    DECLARE v_name VARCHAR(255);
+    DECLARE v_total_marks INT;
+    DECLARE done INT DEFAULT FALSE;
+
+    -- Cursor to iterate through the records in Stud_Marks
+    DECLARE cur CURSOR FOR
+    SELECT name, total_marks FROM Stud_Marks;
+
+    -- Handler to exit the loop when no more rows are found
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    -- Open the cursor
+    OPEN cur;
+
+    -- Loop through each record
+    cur_loop: LOOP
+        -- Fetch each record into variables
+        FETCH cur INTO v_name, v_total_marks;
+
+        -- Exit the loop if no more records
+        IF done THEN
+            LEAVE cur_loop;
+        END IF;
+
+        -- Call the proc_Grade procedure to categorize the student
+        CALL proc_Grade(v_name, v_total_marks);
+    END LOOP cur_loop;
+
+    -- Close the cursor
+    CLOSE cur;
+END$$
+
+DELIMITER ;
+
+-- Step 4: Insert data into Stud_Marks
+INSERT INTO Stud_Marks (name, total_marks)
+VALUES 
+('Alice', 1450),
+('Bob', 960),
+('Charlie', 880),
+('David', 820);
+
+-- 5.Call procedure
+CALL proc_Process_Students();
+
+-- Step 6: Check results
+SELECT * FROM Result;
+
+------------
